@@ -1,0 +1,34 @@
+{
+  "name": "@epixzone/epixframe",
+  "version": "1.0.0",
+  "description": "Unified communication library for EpixNet sites",
+  "main": "dist/epixframe.js",
+  "module": "dist/epixframe.esm.js",
+  "types": "types/epixframe.d.ts",
+  "files": [
+    "dist/",
+    "types/"
+  ],
+  "scripts": {
+    "build": "rollup -c rollup.config.mjs",
+    "minify": "terser dist/epixframe.js -o dist/epixframe.min.js --compress --mangle",
+    "dist": "npm run build && npm run minify"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EpixZone/epixframe.git"
+  },
+  "keywords": [
+    "epixnet",
+    "epixframe",
+    "decentralized",
+    "p2p",
+    "iframe"
+  ],
+  "author": "EpixZone",
+  "license": "MIT",
+  "devDependencies": {
+    "rollup": "^4.0.0",
+    "terser": "^5.0.0"
+  }
+}
