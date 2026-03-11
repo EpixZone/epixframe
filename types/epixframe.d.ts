@@ -199,8 +199,14 @@ export declare class EpixFrame {
   /** Respond to a wrapper request by message id. */
   response(to: number, result: any): void;
 
-  /** Log with [EpixFrame] prefix. */
+  /** Log with [ClassName] prefix. Subclasses get their own name. */
   log(...args: any[]): void;
+
+  /** Start a named timer for performance logging. */
+  logStart(name: string, ...args: any[]): void;
+
+  /** End a named timer and log elapsed time in ms. */
+  logEnd(name: string, ...args: any[]): void;
 
   // ---------------------------------------------------------------------------
   // Event system

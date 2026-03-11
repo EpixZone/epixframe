@@ -111,12 +111,32 @@ class EpixFrame {
   }
 
   /**
-   * Log with [EpixFrame] prefix (replaces CoffeeScript Class.log).
+   * Log with [ClassName] prefix (replaces CoffeeScript Class.log).
+   * Subclasses automatically get their own name, e.g. [EpixTalk].
    */
   log() {
-    var args = ['[EpixFrame]'];
+    var args = ['[' + this.constructor.name + ']'];
     for (var i = 0; i < arguments.length; i++) args.push(arguments[i]);
     console.log.apply(console, args);
+  }
+
+  logStart(name) {
+    if (!this._logTimers) this._logTimers = {};
+    this._logTimers[name] = Date.now();
+    if (arguments.length > 1) {
+      var args = [name];
+      for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
+      args.push('(started)');
+      this.log.apply(this, args);
+    }
+  }
+
+  logEnd(name) {
+    var ms = Date.now() - (this._logTimers && this._logTimers[name] || 0);
+    var args = [name];
+    for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
+    args.push('(Done in ' + ms + 'ms)');
+    this.log.apply(this, args);
   }
 
   // ---------------------------------------------------------------------------
