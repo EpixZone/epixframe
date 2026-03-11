@@ -27,6 +27,9 @@ export interface ServerInfo {
   lib_verify_best: string;
   updatesite: string;
   dist_type: string;
+  chain_rpc_url: string;
+  chain_evm_rpc_url: string;
+  chain_block_explorer_url: string;
   [key: string]: any;
 }
 
@@ -333,6 +336,14 @@ export declare class EpixFrame {
   vrfDeriveRandom(height: number, seed: string, count: number): Promise<VrfDeriveResult>;
   vrfMultiBlockBeacon(endHeight: number, blocks: number): Promise<VrfMultiBlockResult>;
   vrfInvalidateCache(): Promise<string>;
+
+  // ---------------------------------------------------------------------------
+  // Chain RPC URLs
+  // ---------------------------------------------------------------------------
+
+  chainRpcUrl(): Promise<string | null>;
+  chainEvmRpcUrl(): Promise<string | null>;
+  chainBlockExplorerUrl(): Promise<string | null>;
 
   // ---------------------------------------------------------------------------
   // Ajax monkey-patching

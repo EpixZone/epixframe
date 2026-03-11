@@ -329,6 +329,25 @@
     vrfInvalidateCache() { return this.cmd('vrfInvalidateCache'); }
 
     // ---------------------------------------------------------------------------
+    // Chain RPC URLs (fetched from serverInfo, cached)
+    // ---------------------------------------------------------------------------
+
+    async chainRpcUrl() {
+      if (!this._serverInfoCache) this._serverInfoCache = await this.serverInfo();
+      return this._serverInfoCache.chain_rpc_url || null;
+    }
+
+    async chainEvmRpcUrl() {
+      if (!this._serverInfoCache) this._serverInfoCache = await this.serverInfo();
+      return this._serverInfoCache.chain_evm_rpc_url || null;
+    }
+
+    async chainBlockExplorerUrl() {
+      if (!this._serverInfoCache) this._serverInfoCache = await this.serverInfo();
+      return this._serverInfoCache.chain_block_explorer_url || null;
+    }
+
+    // ---------------------------------------------------------------------------
     // Ajax monkey-patching
     // ---------------------------------------------------------------------------
 

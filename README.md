@@ -232,6 +232,16 @@ Events: `openWebsocket`, `closeWebsocket`, `request`.
 | `vrfMultiBlockBeacon(endHeight, blocks)` | Combined multi-block randomness. |
 | `vrfInvalidateCache()` | Clear local beacon cache. |
 
+### Chain RPC URLs
+
+| Method | Description |
+|--------|-------------|
+| `chainRpcUrl()` | Get the Cosmos REST API URL from EpixNet config. |
+| `chainEvmRpcUrl()` | Get the EVM JSON-RPC URL from EpixNet config. |
+| `chainBlockExplorerUrl()` | Get the block explorer URL from EpixNet config. |
+
+These methods fetch from `serverInfo` and cache the result. Use them instead of hardcoding RPC URLs.
+
 ### Ajax
 
 | Method | Description |
