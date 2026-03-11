@@ -516,5 +516,12 @@
 
 if (typeof window !== 'undefined') {
   window.EpixFrame = EpixFrameModule.EpixFrame;
-  if (!window.epixFrame) window.epixFrame = new EpixFrameModule.EpixFrame();
+  var _epixFrameSingleton = null;
+  Object.defineProperty(window, 'epixFrame', {
+    get: function() {
+      if (!_epixFrameSingleton) _epixFrameSingleton = new EpixFrameModule.EpixFrame();
+      return _epixFrameSingleton;
+    },
+    configurable: true
+  });
 }
