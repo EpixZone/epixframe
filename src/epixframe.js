@@ -28,6 +28,7 @@ class EpixFrame {
     // For CoffeeScript compat  - waiting_cb accessible
     this.waiting_cb = this._waitingCb;
     this.next_message_id = this._nextId;
+    this.history_state = this._historyState;
 
     // Extract nonce from URL
     this._wrapperNonce = this._extractNonce();
@@ -411,13 +412,13 @@ class EpixFrame {
 
     // Scroll state: save on unload
     window.addEventListener('beforeunload', function () {
-      self._historyState.scrollTop = window.pageYOffset || document.documentElement.scrollTop || 0;
-      self.cmd('wrapperReplaceState', [self._historyState, null]);
+      self.history_state.scrollTop = window.pageYOffset || document.documentElement.scrollTop || 0;
+      self.cmd('wrapperReplaceState', [self.history_state, null]);
     });
 
     // Scroll state: restore on connect
     this.cmd('wrapperGetState', {}, function (state) {
-      if (state) self._historyState = state;
+      if (state) { self._historyState = state; self.history_state = state; }
       if ((window.pageYOffset || 0) === 0 && state && state.scrollTop) {
         window.scroll(window.pageXOffset || 0, state.scrollTop);
       }
