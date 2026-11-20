@@ -2,7 +2,7 @@
  * EpixFrame  - Unified communication library for EpixNet sites.
  *
  * @license MIT
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 export interface ServerInfo {
@@ -99,24 +99,46 @@ export interface FileNeedOptions {
   priority?: number;
 }
 
+/** A block's randomness beacon, as returned by vrfGetBeacon / vrfLatestBeacon. */
 export interface VrfBeacon {
+  /** Block height. */
   height: number;
-  randomness: string;
-  proof: string;
-  prover: string;
-  timestamp: string;
-  [key: string]: any;
+  /** The beacon value (hex). Pass this to vrfDeriveRandom. */
+  beacon: string;
+  /** The block proposer. */
+  proposer: string;
+  /** Block time. */
+  timestamp: number;
 }
 
-export interface VrfDeriveResult {
-  values: string[];
-  source_beacon: VrfBeacon;
-  [key: string]: any;
-}
+/** vrfDeriveRandom's result: `count` 32-byte hex values. */
+export type VrfDeriveResult = string[];
 
+/** vrfMultiBlockBeacon's result: one beacon combined over the window. */
 export interface VrfMultiBlockResult {
-  combined_randomness: string;
-  beacons: VrfBeacon[];
+  /** The combined beacon value (hex). */
+  beacon: string;
+}
+
+/** dirList entry when called with `{ stats: true }`. */
+export interface DirEntry {
+  name: string;
+  is_dir: boolean;
+  size: number;
+  [key: string]: any;
+}
+
+export interface OptionalFileListOptions {
+  /** Another xite's address (requires permission for it). */
+  address?: string;
+  /** Comma list, e.g. 'downloaded' (default) or 'downloaded,bigfile'. */
+  filter?: string;
+  /** SQL LIKE pattern on the inner path, e.g. 'data/videos/%'. */
+  filter_inner_path?: string;
+  /** Default 'time_downloaded DESC'. */
+  orderby?: string;
+  /** 0 or omitted: no limit. */
+  limit?: number;
   [key: string]: any;
 }
 
@@ -172,13 +194,16 @@ export declare class EpixFrame {
   /** Called at the end of the constructor. Override for custom init logic. */
   init(): this;
 
-  /** Called when the wrapper websocket opens. */
+  /**
+   * Called when the wrapper websocket opens. The 'openWebsocket' event is
+   * emitted after it whether or not an override calls super.
+   */
   onOpenWebsocket(): void;
 
-  /** Called when the wrapper websocket closes. */
+  /** Called when the wrapper websocket closes; then 'closeWebsocket' is emitted. */
   onCloseWebsocket(): void;
 
-  /** Called for unhandled wrapper commands. */
+  /** Called for unhandled wrapper commands; then 'request' is emitted. */
   onRequest(cmd: string, message: any): void;
 
   // ---------------------------------------------------------------------------
@@ -231,23 +256,44 @@ export declare class EpixFrame {
   serverInfo(): Promise<ServerInfo>;
   siteInfo(): Promise<SiteInfo>;
 
-  getLocalStorage(): Promise<Record<string, any>>;
-  setLocalStorage(data: Record<string, any>): Promise<string>;
+  /**
+   * Read wrapper-side storage. Values stored by 1.0.x (wrapped in a
+   * one-element array) are unwrapped.
+   */
+  getLocalStorage(): Promise<Record<string, any> | null>;
+  /** Write wrapper-side storage; `data` is stored as given. */
+  setLocalStorage(data: Record<string, any>): Promise<void>;
 
   getState(): Promise<any>;
+
+  // Fire-and-forget: the wrapper never answers these, so they register no
+  // callback and return a Promise that is already resolved once posted.
   pushState(state: any): Promise<void>;
   replaceState(state: any): Promise<void>;
-
   setViewport(viewport: string): Promise<void>;
   setTitle(title: string): Promise<void>;
-
   notify(type: 'info' | 'done' | 'error', message: string, timeout?: number): Promise<void>;
-  confirm(message: string): Promise<boolean>;
-  prompt(message: string, type?: string, placeholder?: string): Promise<string | null>;
-
   openWindow(url: string): Promise<void>;
   innerLoaded(): Promise<void>;
-  requestPermission(permission: string): Promise<string>;
+
+  /**
+   * Resolves `true` when the user clicks the button. Dismissing the dialog
+   * sends no answer, so the Promise then stays pending.
+   */
+  confirm(message: string): Promise<boolean>;
+  /**
+   * @param type input type, default 'text'
+   * @param caption button label, default 'OK'
+   * @param placeholder input placeholder
+   */
+  prompt(message: string, type?: string, caption?: string, placeholder?: string): Promise<string>;
+
+  /**
+   * Ask the user for a permission. If it is already granted the wrapper
+   * sends no answer (the Promise stays pending): check
+   * siteInfo().settings.permissions first.
+   */
+  requestPermission(permission: string): Promise<any>;
 
   // ---------------------------------------------------------------------------
   // File operations
@@ -259,7 +305,8 @@ export declare class EpixFrame {
   fileList(path: string): Promise<string[]>;
   fileRules(path: string): Promise<FileRules>;
   fileNeed(path: string, opts?: FileNeedOptions): Promise<string>;
-  dirList(path: string, opts?: any): Promise<string[]>;
+  dirList(path: string, opts?: { stats?: false }): Promise<string[]>;
+  dirList(path: string, opts: { stats: true }): Promise<DirEntry[]>;
 
   // ---------------------------------------------------------------------------
   // Database
@@ -283,7 +330,11 @@ export declare class EpixFrame {
   xidResolveName(name: string): Promise<any>;
   xidResolveBatch(addresses: string[]): Promise<Record<string, any>>;
   xidResolveIdentity(address: string): Promise<any>;
-  xidResolveSite(site: string): Promise<any>;
+  /**
+   * @deprecated Not implemented by the EpixNet node: always rejects. Use
+   * `siteInfo().canonical_domain` for the current xite, or `xidResolveName`.
+   */
+  xidResolveSite(site: string): Promise<never>;
 
   // ---------------------------------------------------------------------------
   // Encryption / Signing
@@ -302,7 +353,9 @@ export declare class EpixFrame {
 
   feedFollow(feeds: Record<string, any>): Promise<string>;
   feedList(): Promise<Record<string, any>>;
+  /** Requires the ADMIN permission. */
   feedQuery(params?: FeedQueryParams): Promise<FeedItem[]>;
+  /** Requires the ADMIN permission. */
   feedSearch(query: string): Promise<FeedItem[]>;
 
   // ---------------------------------------------------------------------------
@@ -311,6 +364,7 @@ export declare class EpixFrame {
 
   muteAdd(authAddress: string, certUserId: string, reason: string): Promise<string>;
   muteRemove(authAddress: string): Promise<string>;
+  /** Requires the ADMIN permission. */
   muteList(): Promise<any[]>;
 
   // ---------------------------------------------------------------------------
@@ -321,7 +375,11 @@ export declare class EpixFrame {
   optionalFileUnpin(path: string): Promise<string>;
   optionalFileDelete(path: string): Promise<string>;
   optionalFileInfo(path: string): Promise<any>;
-  optionalFileList(path: string): Promise<any[]>;
+  /**
+   * @param filterInnerPath SQL LIKE pattern on the inner path ('%' wildcard), or null for all
+   */
+  optionalFileList(filterInnerPath?: string | null, opts?: OptionalFileListOptions): Promise<any[]>;
+  optionalFileList(opts: OptionalFileListOptions): Promise<any[]>;
   optionalHelp(directory: string, title: string, address?: string): Promise<string>;
   optionalHelpRemove(directory: string, address?: string): Promise<string>;
 
@@ -339,8 +397,13 @@ export declare class EpixFrame {
 
   vrfGetBeacon(height: number): Promise<VrfBeacon>;
   vrfLatestBeacon(): Promise<VrfBeacon>;
-  vrfDeriveRandom(height: number, seed: string, count: number): Promise<VrfDeriveResult>;
+  /**
+   * @param beacon the hex `beacon` string of a VrfBeacon
+   * @returns `count` hex values, value[i] = sha256(beacon + seed + i)
+   */
+  vrfDeriveRandom(beacon: string, seed: string, count: number): Promise<VrfDeriveResult>;
   vrfMultiBlockBeacon(endHeight: number, blocks: number): Promise<VrfMultiBlockResult>;
+  /** A no-op on the current node (it keeps no beacon cache); resolves 'ok'. */
   vrfInvalidateCache(): Promise<string>;
 
   // ---------------------------------------------------------------------------
@@ -355,15 +418,18 @@ export declare class EpixFrame {
   // Ajax monkey-patching
   // ---------------------------------------------------------------------------
 
-  /** Patch XMLHttpRequest and fetch to include the ajax key. */
+  /**
+   * Patch XMLHttpRequest and fetch to add the xite's ajax key to requests
+   * for this node's own host only (never to other hosts). Same-host requests
+   * made before the key arrives wait for it. Idempotent.
+   */
   monkeyPatchAjax(): Promise<void>;
 }
 
 /**
- * Lazy singleton  - returns the shared EpixFrame instance.
- * Created on first call.
+ * The shared EpixFrame instance (the same object as the UMD
+ * `window.epixFrame`), created lazily on first use. Use it directly
+ * (`epixFrame.siteInfo()`); calling it (`epixFrame()`, the 1.0.x form)
+ * also returns the instance.
  */
-export declare function epixFrame(): EpixFrame;
-
-/** The singleton instance (available after first call to epixFrame()). */
-export declare const _singleton: EpixFrame | null;
+export declare const epixFrame: EpixFrame & (() => EpixFrame);

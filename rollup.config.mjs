@@ -9,11 +9,11 @@ export default [
       footer: `
 if (typeof window !== 'undefined') {
   window.EpixFrame = EpixFrameModule.EpixFrame;
-  var _epixFrameSingleton = null;
+  // The module's lazy shared instance (the one the ESM export proxies), so
+  // window.epixFrame and EpixFrameModule.epixFrame are the same frame.
   Object.defineProperty(window, 'epixFrame', {
     get: function() {
-      if (!_epixFrameSingleton) _epixFrameSingleton = new EpixFrameModule.EpixFrame();
-      return _epixFrameSingleton;
+      return EpixFrameModule.epixFrame();
     },
     configurable: true
   });

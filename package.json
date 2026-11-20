@@ -1,6 +1,6 @@
 {
   "name": "@epixzone/epixframe",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Unified communication library for EpixNet sites",
   "main": "dist/epixframe.js",
   "module": "dist/epixframe.esm.js",
@@ -12,7 +12,8 @@
   "scripts": {
     "build": "rollup -c rollup.config.mjs",
     "minify": "terser dist/epixframe.js -o dist/epixframe.min.js --compress --mangle",
-    "dist": "npm run build && npm run minify"
+    "dist": "npm run build && npm run minify",
+    "test": "node --test tests/*.test.cjs"
   },
   "repository": {
     "type": "git",
