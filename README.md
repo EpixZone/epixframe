@@ -2,34 +2,52 @@
 
 Unified communication library for EpixNet sites. Provides the iframe-to-wrapper postMessage bridge, 60+ convenience methods for every EpixNet API command, and a minimal event system.
 
-**8 KB minified**  - zero dependencies.
+**12 KB minified**, zero dependencies. Version 1.1.0 (see [CHANGELOG.md](CHANGELOG.md)).
 
 ## Installation
 
-### Script tag (CDN)
+Xites must work offline and over Tor, so they vendor their libraries instead
+of loading them from a CDN. Download a build from this repository's `dist/`
+folder (pick the release tag you want) and commit it into your xite:
+
+| File | Use |
+|------|-----|
+| `dist/epixframe.min.js` | Script tag (minified UMD). Recommended. |
+| `dist/epixframe.js` | Script tag (readable UMD). |
+| `dist/epixframe.esm.js` | ES module (`<script type="module">` or a bundler). |
+
+For example, save `dist/epixframe.min.js` as `js/lib/epixframe.min.js` in
+your xite and sign it with the rest of the xite's files.
+
+The package is not published on npm yet (publication as `@epixzone/epixframe`
+is planned); until then, vendor the file as above.
+
+### Script tag
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/EpixZone/epixframe@v1.0.0/dist/epixframe.min.js"></script>
+<script src="js/lib/epixframe.min.js"></script>
 ```
 
 This creates:
 - `window.EpixFrame`  - the constructor (for subclassing)
-- `window.epixFrame`  - a ready-to-use singleton instance
+- `window.epixFrame`  - the shared instance, created on first use
 
 ### ES module
 
-```bash
-npm install @epixzone/epixframe
+```javascript
+import { EpixFrame, epixFrame } from './js/lib/epixframe.esm.js';
+
+const info = await epixFrame.siteInfo();
 ```
 
-```javascript
-import { EpixFrame, epixFrame } from '@epixzone/epixframe';
-```
+`epixFrame` is the shared instance (the same object as `window.epixFrame` in
+the script-tag build), created lazily on first use. For code written against
+1.0.x, calling it as a function (`epixFrame()`) still returns that instance.
 
 ### CoffeeScript
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/EpixZone/epixframe@v1.0.0/dist/epixframe.min.js"></script>
+<script src="js/lib/epixframe.min.js"></script>
 ```
 
 ```coffeescript
@@ -73,10 +91,14 @@ class MyApp extends EpixFrame
       @log "Unknown", cmd
 ```
 
+Overriding a hook does not silence the matching event: `openWebsocket`,
+`closeWebsocket` and `request` are emitted after the hook runs, whether or not
+the override calls `super`.
+
 ### TypeScript / React
 
 ```typescript
-import { epixFrame } from '@epixzone/epixframe';
+import { epixFrame } from './js/lib/epixframe.esm.js';
 
 async function loadPosts() {
   const rows = await epixFrame.dbQuery(
@@ -98,14 +120,15 @@ async function loadPosts() {
 
 ### Lifecycle hooks
 
-Override these in your subclass:
+Override these in your subclass (calling `super` is optional; the matching
+event is emitted either way):
 
 | Method | Description |
 |--------|-------------|
 | `init()` | Called at the end of the constructor. |
-| `onOpenWebsocket()` | Called when wrapper websocket opens. |
-| `onCloseWebsocket()` | Called when wrapper websocket closes. |
-| `onRequest(cmd, message)` | Called for unhandled wrapper commands (`setSiteInfo`, etc.). |
+| `onOpenWebsocket()` | Called when wrapper websocket opens, then `openWebsocket` is emitted. |
+| `onCloseWebsocket()` | Called when wrapper websocket closes, then `closeWebsocket` is emitted. |
+| `onRequest(cmd, message)` | Called for unhandled wrapper commands (`setSiteInfo`, etc.), then `request` is emitted. |
 
 ### Events
 
@@ -124,19 +147,23 @@ Events: `openWebsocket`, `closeWebsocket`, `request`.
 |--------|-------------|
 | `serverInfo()` | Server configuration and version. |
 | `siteInfo()` | Current site info (address, peers, settings). |
-| `getLocalStorage()` | Read site-scoped local storage. |
-| `setLocalStorage(data)` | Write site-scoped local storage. |
+| `getLocalStorage()` | Read site-scoped local storage (data written by 1.0.x, wrapped in a one-element array, is unwrapped). |
+| `setLocalStorage(data)` | Write site-scoped local storage; `data` is stored as given. |
 | `getState()` | Get current wrapper history state. |
-| `pushState(state)` | Push history state. |
-| `replaceState(state)` | Replace history state. |
-| `setViewport(viewport)` | Set viewport meta tag. |
-| `setTitle(title)` | Set page title. |
-| `notify(type, message, timeout?)` | Show notification (`'info'`, `'done'`, `'error'`). |
-| `confirm(message)` | Show confirmation dialog. |
-| `prompt(message, type?, placeholder?)` | Show prompt dialog. |
-| `openWindow(url)` | Open URL in new window. |
-| `innerLoaded()` | Signal that inner frame has loaded. |
-| `requestPermission(perm)` | Request wrapper permission. |
+| `pushState(state)` | Push history state. Fire-and-forget. |
+| `replaceState(state)` | Replace history state. Fire-and-forget. |
+| `setViewport(viewport)` | Set viewport meta tag. Fire-and-forget. |
+| `setTitle(title)` | Set page title. Fire-and-forget. |
+| `notify(type, message, timeout?)` | Show notification (`'info'`, `'done'`, `'error'`). Fire-and-forget. |
+| `confirm(message)` | Show confirmation dialog. Resolves `true` on click; dismissing it sends no answer (stays pending). |
+| `prompt(message, type?, caption?, placeholder?)` | Show prompt dialog. `type` defaults to `'text'`, `caption` (button label) to `'OK'`. Resolves with the text. |
+| `openWindow(url)` | Open URL in new window. Fire-and-forget. |
+| `innerLoaded()` | Signal that inner frame has loaded. Fire-and-forget. |
+| `requestPermission(perm)` | Request a permission (e.g. `'ADMIN'`, `'Merger:EpixPost'`). If already granted the wrapper sends no answer, so check `siteInfo().settings.permissions` first. |
+
+Fire-and-forget methods: the wrapper never answers these commands, so they
+register no callback and return a Promise that is already resolved once the
+message is posted.
 
 ### Files
 
@@ -148,7 +175,7 @@ Events: `openWebsocket`, `closeWebsocket`, `request`.
 | `fileList(path)` | List files in directory. |
 | `fileRules(path)` | Get signing rules for a path. |
 | `fileNeed(path, opts?)` | Request file from network. |
-| `dirList(path, opts?)` | List directories. |
+| `dirList(path, opts?)` | List a directory's entries (names). With `{ stats: true }`: `[{ name, is_dir, size }]`. |
 
 ### Database
 
@@ -172,7 +199,7 @@ Events: `openWebsocket`, `closeWebsocket`, `request`.
 | `xidResolveName(name)` | Resolve xID name to address. |
 | `xidResolveBatch(addresses)` | Batch resolve addresses. |
 | `xidResolveIdentity(address)` | Full identity lookup. |
-| `xidResolveSite(site)` | Resolve site's canonical xID. |
+| `xidResolveSite(site)` | **Deprecated**: the node has no such command, so this logs a warning and rejects. Use `siteInfo().canonical_domain` for the current xite, or `xidResolveName(name)`. |
 
 ### Encryption / Signing
 
@@ -191,8 +218,8 @@ Events: `openWebsocket`, `closeWebsocket`, `request`.
 |--------|-------------|
 | `feedFollow(feeds)` | Set followed feeds. |
 | `feedList()` | List followed feeds. |
-| `feedQuery(params?)` | Query feed items. |
-| `feedSearch(query)` | Search feeds. |
+| `feedQuery(params?)` | Query feed items. **Requires ADMIN.** |
+| `feedSearch(query)` | Search feeds. **Requires ADMIN.** |
 
 ### Content filtering
 
@@ -200,7 +227,7 @@ Events: `openWebsocket`, `closeWebsocket`, `request`.
 |--------|-------------|
 | `muteAdd(authAddr, certUserId, reason)` | Mute a user. |
 | `muteRemove(authAddr)` | Unmute a user. |
-| `muteList()` | List muted users. |
+| `muteList()` | List muted users. **Requires ADMIN.** |
 
 ### Optional files
 
@@ -210,7 +237,7 @@ Events: `openWebsocket`, `closeWebsocket`, `request`.
 | `optionalFileUnpin(path)` | Unpin an optional file. |
 | `optionalFileDelete(path)` | Delete an optional file. |
 | `optionalFileInfo(path)` | Get optional file info. |
-| `optionalFileList(path)` | List optional files. |
+| `optionalFileList(filterInnerPath?, opts?)` | List optional files. `filterInnerPath` is a SQL LIKE pattern (`'data/videos/%'`). `opts`: `{ address, filter, orderby, limit }` (`filter` defaults to `'downloaded'`). An options object may be the only argument. |
 | `optionalHelp(dir, title, addr?)` | Help distribute optional files. |
 | `optionalHelpRemove(dir, addr?)` | Stop helping distribute. |
 
@@ -226,11 +253,16 @@ Events: `openWebsocket`, `closeWebsocket`, `request`.
 
 | Method | Description |
 |--------|-------------|
-| `vrfGetBeacon(height)` | Get VRF beacon at block height. |
-| `vrfLatestBeacon()` | Get most recent beacon. |
-| `vrfDeriveRandom(height, seed, count)` | Derive random values from beacon. |
-| `vrfMultiBlockBeacon(endHeight, blocks)` | Combined multi-block randomness. |
-| `vrfInvalidateCache()` | Clear local beacon cache. |
+| `vrfGetBeacon(height)` | Beacon at a block height: `{ height, beacon, proposer, timestamp }`. |
+| `vrfLatestBeacon()` | Most recent beacon, same shape. |
+| `vrfDeriveRandom(beacon, seed, count)` | `count` hex values from a beacon's hex `beacon` string: `value[i] = sha256(beacon + seed + i)`. Resolves with a plain array. |
+| `vrfMultiBlockBeacon(endHeight, blocks)` | Beacon combined over `blocks` blocks (1 to 256) ending at `endHeight`: `{ beacon }`. |
+| `vrfInvalidateCache()` | No-op on the current node (it keeps no beacon cache); resolves `'ok'`. |
+
+```javascript
+const b = await epixFrame.vrfLatestBeacon();
+const [roll] = await epixFrame.vrfDeriveRandom(b.beacon, 'dice-42', 1);
+```
 
 ### Chain RPC URLs
 
@@ -246,7 +278,10 @@ These methods fetch from `serverInfo` and cache the result. Use them instead of 
 
 | Method | Description |
 |--------|-------------|
-| `monkeyPatchAjax()` | Patch `XMLHttpRequest` and `fetch` to include the wrapper ajax key. Call this before making any direct HTTP requests. |
+| `monkeyPatchAjax()` | Patch `XMLHttpRequest` and `fetch` to add the xite's ajax key to requests for the node's own host (relative URLs and URLs whose host is `location.host`). Other hosts never get the key. Same-host requests made before the key arrives wait for it. Resolves once the key is known; safe to call more than once. |
+
+In a sandboxed xite frame, reading the xite's own files with `fetch` or `XHR`
+needs the ajax key, so call `monkeyPatchAjax()` once at startup.
 
 ## Dual API: Promises and callbacks
 
@@ -297,7 +332,7 @@ The `cmd()` method signature is fully backward compatible. `@log()` still works.
 |----------|------|-------------|
 | `isEmbedded` | `boolean` | `true` if running inside EpixNet wrapper. |
 | `url` | `string\|null` | URL passed to constructor. |
-| `waiting_cb` | `object` | Pending callback map (CoffeeScript compat). |
+| `waiting_cb` | `object` | Pending callback map (CoffeeScript compat). Fire-and-forget methods add nothing to it. |
 | `wrapper_nonce` | `string\|null` | Wrapper authentication nonce. |
 | `next_message_id` | `number` | Next message ID counter. |
 
@@ -305,8 +340,12 @@ The `cmd()` method signature is fully backward compatible. `@log()` still works.
 
 ```bash
 npm install
-npm run dist    # → dist/epixframe.js, dist/epixframe.min.js, dist/epixframe.esm.js
+npm run dist    # dist/epixframe.js, dist/epixframe.min.js, dist/epixframe.esm.js
+npm test        # node --test against the built dist/ files
 ```
+
+Commit the rebuilt `dist/` files with every source change: xites vendor them
+directly.
 
 ## License
 
