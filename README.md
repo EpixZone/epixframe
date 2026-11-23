@@ -2,7 +2,7 @@
 
 Unified communication library for EpixNet sites. Provides the iframe-to-wrapper postMessage bridge, 60+ convenience methods for every EpixNet API command, and a minimal event system.
 
-**12 KB minified**, zero dependencies. Version 1.1.0 (see [CHANGELOG.md](CHANGELOG.md)).
+**12 KB minified**, zero dependencies. Version 1.1.1 (see [CHANGELOG.md](CHANGELOG.md)).
 
 ## Installation
 

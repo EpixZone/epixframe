@@ -117,3 +117,40 @@ test('monkeyPatchAjax is idempotent', async () => {
   assert.equal(urlOf(h.fetchCalls[0]), BASE + 'data/x.json?ajax_key=K2');
   assert.equal(h.sent.filter((m) => m.cmd === 'wrapperGetAjaxKey').length, 1);
 });
+
+test('the key joins a URL that ends in a bare "?" without a second separator', async () => {
+  const h = load();
+  const frame = h.frame();
+  const patched = frame.monkeyPatchAjax();
+  h.respond('wrapperGetAjaxKey', 'Q1');
+  await patched;
+  await h.ctx.fetch('data/a.json?');
+  assert.equal(urlOf(h.fetchCalls[0]), BASE + 'data/a.json?ajax_key=Q1');
+});
+
+test('a queued XHR whose replay throws is logged, not left as an unhandled rejection', async () => {
+  const h = load();
+  const frame = h.frame();
+  const logged = [];
+  frame.log = function () { logged.push(Array.from(arguments)); };
+  const unhandled = [];
+  const onUnhandled = (reason) => unhandled.push(reason);
+  process.on('unhandledRejection', onUnhandled);
+  try {
+    const patched = frame.monkeyPatchAjax();
+    const xhr = new h.ctx.XMLHttpRequest();
+    xhr.open('GET', 'data/posts.json');
+    xhr.send(null);
+    // The fake records each real call; a frozen record makes the replay's
+    // real open() throw, as a real XHR in a bad state would.
+    xhr.calls = Object.freeze([]);
+    h.respond('wrapperGetAjaxKey', 'XK');
+    await patched;
+    await flush();
+    await flush();
+    assert.deepEqual(unhandled, []);
+    assert.ok(logged.some((args) => args[0] === 'Deferred XHR could not be sent:'));
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+  }
+});
