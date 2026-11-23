@@ -131,6 +131,9 @@ test('xidResolveSite warns and rejects without sending anything', async () => {
   const frame = h.frame();
   const count = h.sent.length;
   await assert.rejects(frame.xidResolveSite('epix1xite'), (err) => {
+    // An Error from the frame's realm, so check its brand, not instanceof.
+    assert.equal(Object.prototype.toString.call(err), '[object Error]', 'rejects with an Error');
+    assert.match(err.message, /not implemented/);
     assert.match(err.error, /not implemented/);
     return true;
   });

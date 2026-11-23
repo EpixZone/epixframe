@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.1.1
+
+Clears the SonarCloud findings that xites vendoring 1.1.0 hit in their own
+quality gates (EpixZone/epixframe#3). No change to what goes on the wire.
+
+### Fixed
+
+- `monkeyPatchAjax()`: an XHR queued until the ajax key arrives is replayed
+  in a promise callback, so an exception from the real `open`/`send` there
+  became an unhandled rejection. It is now caught and logged
+  ("Deferred XHR could not be sent:"), since `send()` has already returned
+  to the caller.
+- `xidResolveSite()` rejects with an `Error` (message as before). The
+  message is still on `.error` too, so callers that read `err.error` keep
+  working.
+
+### Changed
+
+- Code-quality cleanups with no behavior change: the "already patched" check
+  compares the stored Promise with `null` instead of testing its
+  truthiness; the URL-keying helper moved to module scope and lost its nested
+  ternary; the XHR replay uses an arrow function and `for...of`; the
+  fire-and-forget scroll save on `beforeunload` is marked `void`.
+
+### Added
+
+- Tests for a URL ending in a bare `?`, a queued XHR whose replay throws,
+  and the `Error` that `xidResolveSite()` rejects with.
+- SonarCloud configuration (`.sonarcloud.properties`): `src/` is analyzed,
+  `dist/` is built from it.
+
 ## 1.1.0
 
 Fixes found by checking every helper against what the EpixNet node
